@@ -87,6 +87,12 @@ if (Number.isNaN(deleteExpiredData) || deleteExpiredData < 0) {
 
 console.log("🌶  given `delete_expired_data` is ",deleteExpiredData);
 
+let whiteListRaw = process.env.INPUT_TAG_WHITELIST || "";
+const whiteSuffixArr = whiteListRaw.trim() ? whiteListRaw.split(",") : [];
+if(whiteSuffixArr.length > 0){
+  console.log("🔖 Tag whitelist suffix: ", whiteSuffixArr.join(","));
+}
+
 let gitHubRestApi = process.env.INPUT_GITHUB_REST_API_URL || "api.github.com";
 
 const commonOpts = {
@@ -100,6 +106,14 @@ const commonOpts = {
   },
 };
 
+function isInWhiteList(tagName){
+  for(let suf of whiteSuffixArr){
+    if(tagName.endsWith(suf)){
+      return true;
+    }
+  }
+  return false;
+}
 
 async function deleteOlderReleases(keepLatest, keepMinDownloadCount, deleteExpiredData) {
   let releaseIdsAndTags = [];
@@ -168,7 +182,7 @@ async function deleteOlderReleases(keepLatest, keepMinDownloadCount, deleteExpir
     
 
 
-    releaseIdsAndTags = activeMatchedReleases
+    let sortedAll = activeMatchedReleases
       .sort((a,b)=> Date.parse(b.published_at) - Date.parse(a.published_at))
       .map(item=> {
         const totalDownloads = item.assets.reduce((sum, asset) => sum + asset.download_count, 0);
@@ -178,9 +192,20 @@ async function deleteOlderReleases(keepLatest, keepMinDownloadCount, deleteExpir
             published_at: item.published_at,
             download_counts: totalDownloads
         }
-      })
-      .slice(keepLatest);
+      });
 
+    const whiteListItems = [];
+    const normalItems = [];
+    for(let obj of sortedAll){
+      if(isInWhiteList(obj.tagName)){
+        whiteListItems.push(obj);
+        console.log(`✅ Whitelist keep: ${obj.tagName}`);
+      }else{
+        normalItems.push(obj);
+      }
+    }
+
+    releaseIdsAndTags = normalItems.slice(keepLatest);
 
     if (keepMinDownloadCount !== 0) 
     {

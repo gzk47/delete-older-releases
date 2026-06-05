@@ -35,7 +35,11 @@ inputs:
     description: the URL of the GitHub Rest API to be used.  This might need to be different if you are a GitHub Enterprise user.
     required: false
     default: api.github.com
+  tag_whitelist:
+    description: Tag suffix whitelist, split by comma. example:01,05,0601
+    required: false
+    default: ""
 
 runs:
-  using: 'node20'
+  using: 'node24'
   main: "index.js"
